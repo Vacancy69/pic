@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>项目信息表添加</title>
+<!-- 请修改相对路径 -->
+<script src="../../../../frame/fui/js/cssboot.js"></script>
+</head>
+
+<body>
+	<!-- 必须有，加载时的loading效果 -->
+	<div class="page-loading"></div>
+	<!-- toolbar区域 -->
+	<div class="fui-toolbar">
+		<a class="mini-button" id="addNew" state="primary" onclick="saveAndNew">保存并新建</a> <a class="mini-button" id="addClose" onclick="saveAndClose">保存并关闭</a> <a class="mini-button"
+			onclick="epoint.closeDialog">关闭</a>
+	</div>
+
+	<!-- 内容区域 -->
+	<div class="fui-content">
+		<div id="fui-form" class="fui-form" style="width: 90%">
+			<div role="form">
+				<div role="row">
+					<div role="control" label="项目名称" starred="true">
+						<input id="projectname" class="mini-textbox" bind="dataBean.projectname" required="true" requiredErrorText="项目名称不能为空!" />
+					</div>
+					<div role="control" label="所属地区" starred="true">
+						<input class="mini-treeselect" action="getBelongzoneModel" id="belongzone" bind="dataBean.belongzone" textField="text" valueField="id" emptyText="请选择..." required="true"
+							onbeforenodeselect="onBeforeTreeNodeSelect" requiredErrorText="所属地区不能为空!" />
+					</div>
+				</div>
+				<div role="row">
+					<div role="control" label="项目类别" starred="true">
+						<input class="mini-combobox" action="projecttypeModel" id="projecttype" bind="dataBean.projecttype" textField="text" valueField="id" emptyText="请选择..." required="true"
+							onValueChanged="onProjectTypeChanged" requiredErrorText="项目类别不能为空!" />
+					</div>
+					<div role="control" label="资金金额" starred="true">
+						<input id="projectmoney" class="mini-textbox" bind="dataBean.projectmoney" required="true" readOnly="true" requiredErrorText="资金金额不能为空!" vType="int" />
+					</div>
+				</div>
+				<div role="row">
+					<div role="control" label="项目经理" starred="true">
+						<input id="projectmanager" class="mini-buttonedit" bind="dataBean.projectmanager" allowInput="false" onButtonClick="onProjectManagerClick" required="true" requiredErrorText="项目经理不能为空!" />
+					</div>
+					<div role="control" label="项目人员" starred="true">
+						<input id="projectuser" class="mini-buttonedit" bind="dataBean.projectuser" allowInput="false" onButtonClick="onProjectUserClick" required="true" requiredErrorText="项目人员不能为空!" />
+					</div>
+				</div>
+				<div role="row">
+					<div role="control" label="项目描述">
+						<input id="descriptions" class="mini-textarea" bind="dataBean.descriptions" />
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- 请修改相对路径 -->
+	<script src="../../../../rest/resource/jsboot"></script>
+	<script>
+		// 初始化页面
+		epoint.initPage('projectinfoaddaction');
+
+		function saveAndNew() {
+			if (epoint.validate()) {
+				epoint.execute('addNew', 'fui-form', newCallback);
+			}
+		}
+
+		function saveAndClose() {
+			if (epoint.validate()) {
+				epoint.execute('add', 'fui-form', closeCallback);
+			}
+		}
+
+		// 新增操作的回调
+		function newCallback(data) {
+			if (data.msg) {
+				epoint.alert(data.msg, '', null, 'info');
+				// 清空表单
+				//epoint.clear('fui-form');
+			}
+			if(data.info != "exist"){
+				epoint.clear('fui-form');
+			}
+		}
+
+		// 关闭操作的回调
+		function closeCallback(data) {
+			if (data.msg) {
+				if (data.msg.indexOf("成功") != -1) {
+					epoint.closeDialog(data.msg);
+				} else {
+					epoint.alert(data.msg, '', null, 'info');
+				}
+			}
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////////s
+		
+		//树状图控制-只能点选区一级
+		function onBeforeTreeNodeSelect(e){
+
+		//第一种写法
+			var level = e.node._level;
+			if(level < 2){
+			//设置当前节点不能点选
+			e.cancel = "true";
+			}
+			//第二种写法
+			//if (!e.isLeaf) {
+				//e.cancel = "true";
+			//}
+		}
+		
+		//设置类别和金额联动
+		function onProjectTypeChanged(e){
+			var val = e.value;
+			switch(val){
+			case "1":
+				mini.get("projectmoney").setValue(1000000);
+				break;
+			case "2":
+				mini.get("projectmoney").setValue(500000);
+				break;
+			case "3":
+				mini.get("projectmoney").setValue(300000);
+				break;
+			case "4":
+				mini.get("projectmoney").setValue(150000);
+				break; 
+			default:
+				break;
+			}
+			mini.get("projectmoney").setIsValid(true);
+		}
+		
+		//弹出项目经理选择页面
+		function onProjectManagerClick(){
+			epoint.openDialog('选择项目经理',"framemanager/orga/orga/ou/selectouuser",onProjectManagerCallBack,{
+				'width':970,
+				'height':550
+			});
+		}
+		
+		//关闭项目经理选择页面时的回调
+		function onProjectManagerCallBack(data) {
+			console.log(data);
+			if (data != "close") {
+				var userSplit = data.split(";");
+				mini.get("projectmanager").setValue(userSplit[1]);
+				mini.get("projectmanager").setText(userSplit[0]);
+				mini.get("projectmanager").setIsValid(true);
+			}
+		}
+		
+		//弹出项目人员选择页面 
+		function onProjectUserClick(){
+			//获取当前控件里的人员guid
+			var userGuid = mini.get("projectuser").getValue();
+			epoint.openDialog('选择项目人员',"framemanager/orga/orga/user/selectuser",onProjectUserCallBack,{
+				'width':970,
+				'height':550,
+				param:{
+					userGuid:userGuid
+				}
+			});	
+		}
+		
+		//关闭项目人员选择页面时的回调
+		function onProjectUserCallBack(data){
+			console.log(data);
+			if (data != "close") {
+				var userSplit = data.split("_SPLIT_");
+				mini.get("projectuser").setValue(userSplit[0]);
+				mini.get("projectuser").setText(userSplit[1]);
+			}
+			mini.get("projectuser").setIsValid(true);
+		}
+	</script>
+</body>
+</html>

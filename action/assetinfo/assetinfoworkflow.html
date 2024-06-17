@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>项目采购数据表工作流</title>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<!-- 请修改相对路径 -->
+<script src="../../../../frame/fui/js/cssboot.js"></script>
+</head>
+
+<body>
+	<div class="page-loading"></div>
+
+	<!-- toolbar区域 -->
+	<div class="fui-toolbar">
+		<div class="uc-handlecontrols" id="handlecontrols" action="handleCtrl" style="width: 100%"></div>
+	</div>
+
+	<div class="fui-content">
+		<div class="fui-accordions">
+			<div role="accordion" opened="true">
+				<div role="head" title="表单填写"></div>
+				<div role="body">
+					<!-- 隐藏按钮id不能修改 -->
+					<div class="hidden">
+						<a class="mini-button" id="btnSaveFrom" onclick="saveFrom">保存</a> <a class="mini-button" id="btnSubmit" onclick="submit">提交</a>
+					</div>
+
+					<!-- 内容区域 -->
+					<div id="fui-form" class="fui-form">
+						<div role="row">
+							<div role="control" label="申请人员">
+								<input id="applyusername" class="mini-outputtext" /> 
+								<input id="applyuserguid" class="mini-hidden" bind="dataBean.applyuserguid" />
+							</div>
+							<div role="control" label="预算信息" starred="true">
+								<input id="budgetguid" class="mini-buttonedit" allowInput="false" onButtonClick="onProjectBudgetClick" bind="dataBean.budgetguid" required="true" requiredErrorText="预算信息不能为空!" />
+							</div>
+						</div>
+						<div role="row">
+							<div role="control" label="申请时间">
+								<input class="mini-outputtext" bind="dataBean.applytime" id="applytime" readOnly="true"/>
+							</div>
+							<div role="control" label="到货时间" starred="true">
+								<input class="mini-datepicker" bind="dataBean.arrivaltime" id="arrivaltime" required="true" requiredErrorText="到货时间不能为空!" />
+							</div>
+						</div>
+						<div role="row">
+							<div role="control" label="采购类型" starred="true">
+								<div class="mini-radiobuttonlist" action="assettypeModel" id="assettype" bind="dataBean.assettype" required="true" requiredErrorText="采购类型不能为空!"></div>
+							</div>
+							<div role="control" label="物品总价" starred="true">
+								<input id="totalmoney" class="mini-textbox" bind="dataBean.totalmoney" required="true" requiredErrorText="物品总价不能为空!" vType="int" />
+							</div>
+						</div>
+						<div role="row">
+							<div role="control" label="物品清单">
+								<div id="uploader" class="mini-webuploader" fileNumLimit="1" action="getFileUploadModel"></div>
+							</div>
+						</div>
+						<div role="row">
+							<div role="control" label="申请说明">
+								<input id="description" class="mini-textarea" bind="dataBean.description" />
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div role="accordion">
+				<div role="head" title="相关附件"></div>
+				<div role="body">
+					<div class="uc-workflowattach" id="workflowattach" action="attachCtrl" style="width: 100%;"></div>
+				</div>
+			</div>
+			<div role="accordion">
+				<div role="head" title="签署意见"></div>
+				<div role="body">
+					<!-- 
+							showmode(显示意见模板模式)
+		   					1:(默认)显示意见模板区域，但仅显示个人意见模板
+		   					2:显示意见模板区域，显示公共和个人意见模板
+		   					3:不显示意见模板区域
+						-->
+					<div class="uc-workflowopinion" id="workflowopinion" action="opinionCtrl" data-options="{showmode : 1}" style="width: 100%;"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- 请修改相对路径 -->
+	<script src="../../../../rest/resource/jsboot"></script>
+	<script>
+			SrcBoot.output([ 'frame/pages/epointworkflow/js/workflowjsboot.js',
+				'frame/pages/epointworkflow/js/tableproperty.js']);
+		</script>
+
+	<script>
+		
+		  var showmode = Util.getUrlParams('showmode');
+		  if (!showmode) {
+			showmode = 1;
+		  }
+		  var opinionControl = $('#workflowopinion');
+		  opinionControl.get(0).dataset.options = "{'showmode' : " + showmode + "}";
+		
+		
+			//初始化页面
+			epoint.initPage('assetinfoworkflowaction', '', function(data){
+				setControlsAccessRight(data);
+				if(data.applyusername){
+					mini.get("applyusername").setValue(data.applyusername);
+				}
+				if(data.applytimeoutput){
+					mini.get("applytime").setValue(data.applytimeoutput);
+				}
+				if(data.budgetname){
+					mini.get("budgetguid").setText(data.budgetname);
+				}
+			});
+    	
+		
+			function saveFrom() {
+				if (epoint.validate()) {
+					epoint.execute('saveForm', 'fui-form', newCallback);
+				}
+				else
+					ShowTdOperate(true);
+			}
+
+			function submit() {
+				if (epoint.validate()) {
+					epoint.execute('submit', 'fui-form', newCallback);
+				}
+				else
+					ShowTdOperate(true);
+			}
+			
+			// 新增操作的回调,必须回调handlecontrols中的HeaderSubmit触发流程流转
+			function newCallback(data) {
+				if (data && data.msg) {
+					epoint.alert(data.msg, '', null, 'info');
+					ShowTdOperate(true);
+				} else {
+					HeaderSubmit();
+				}
+			}
+			
+			
+			//////////////////////////////////////////////////////////////
+			
+		    //弹出预算选择页面
+		    function onProjectBudgetClick(){
+				epoint.openDialog('预算列表', "frame/pages/xmcg/projectbudgetinfo/projectbudgetinfolistselect?flag=flag", projectBudgetClickCallBack, {
+					'width' : 970,
+					'height' : 550
+				});
+		    }
+		    
+		    //关闭预算选择页面的回调
+		    function projectBudgetClickCallBack(data){
+		    	
+		    	if(data!="close"){
+		    		var split = data.split(";");
+			    	mini.get("budgetguid").setValue(split[0]);
+			    	mini.get("budgetguid").setText(split[1]);
+		    	}
+		    	
+		    	mini.get("budgetguid").setIsValid(true);
+		    }
+		</script>
+
+</body>
+
+</html>
